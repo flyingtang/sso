@@ -10,8 +10,8 @@ import (
 )
 
 type BaseModel struct {
-	CreatedAt int `json:"created_at"`
-	UpdatedAt int `json:"updated_at"`
+	CreatedAt int64 `json:"created_at"`
+	UpdatedAt int64 `json:"updated_at"`
 }
 
 type MySql struct {
@@ -31,24 +31,26 @@ CREATE TABLE IF NOT EXISTS Account(
 	nickname VARCHAR(128),
 	sex TINYINT,
 	email VARCHAR(128),
-   	createdAt TIMESTAMP  DEFAULT CURRENT_TIMESTAMP ,
-   	updatedAt TIMESTAMP  NOT NULL DEFAULT CURRENT_TIMESTAMP ,
+   	created_at bigint  NOT NULL,
+   	updated_at bigint  NOT NULL,
 	INDEX username_index(username),
    	PRIMARY KEY (id)
 );`,
 	`
-CREATE TABLE IF NOT EXISTS AccessToken(
+CREATE TABLE IF NOT EXISTS Ticket(
    	id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-   	createdAt TIMESTAMP  DEFAULT CURRENT_TIMESTAMP ,
-   	updatedAt TIMESTAMP  NOT NULL DEFAULT CURRENT_TIMESTAMP ,
-   	token VARCHAR(128) not null unique,
-	ttl INT(11),
+	ticket VARCHAR(128) NOT NULL UNIQUE,
+  	created_at bigint  NOT NULL,
+   	updated_at bigint  NOT NULL,
+	ttl INT,
 	user_id INT UNSIGNED NOT NULL,
-	Scopes VARCHAR(128),
-	INDEX token_index(token),
+	is_verify tinyint NOT NULL DEFAULT 0,
+	INDEX ticket_index(ticket),
 	FOREIGN KEY (user_id) REFERENCES Account(id),
    	PRIMARY KEY (id)
 );`}
+
+
 
 // 数据库如果不存在就创建数据库
 func InitialDatabase() {
@@ -105,9 +107,12 @@ func NewMysql() (*sql.DB, error) {
 }
 
 func GetMySQLDB() *sql.DB{
+
 	if globalMysql != nil {
+
 		return globalMysql.DB
 	}else {
+
 		db,err:=  NewMysql()
 		if err != nil {
 			log.Fatal("invalid MySQL DB ...")

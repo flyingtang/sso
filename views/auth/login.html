@@ -1,7 +1,7 @@
 {{define "auth/login.html"}}
 {{template "layout/header.html" .}}
 <div class="container1">
-    <form class="loginForm"  method="post" action="/login">
+    <form class="loginForm"  method="post" action="/login?"+{{.redirect_uri}}+>
         <div class="form-group">
             <label for="username">用户名</label>
             <input type="text" class="form-control" name="username" id="username" value="" aria-describedby="emailHelp" placeholder="用户名">
@@ -15,7 +15,7 @@
             <input type="checkbox" class="form-check-input" id="remember">
             <label class="form-check-label" for="remember">记住我</label>
         </div>
-        <button type="submit" class="btn btn-primary btn-lg btn-block">登录</button>
+        <button type="submit" onclick="login" class="btn btn-primary btn-lg btn-block">登录</button>
         <div>Or<a href="/signup"> 注册</a></div>
     </form>
 </div>

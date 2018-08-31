@@ -8,6 +8,7 @@ import (
 
 type Account struct {
 	BaseModel
+	Id int 		`json:"id"`
 	Username string `json:"username"`
 	Password string `json:"password"`
 	Nickname string `json:"nickname"`
@@ -22,7 +23,8 @@ func GetAccount(sql string, args ...interface{}) (*Account, error) {
 		res := stmt.QueryRow(args...)
 		var account Account
 
-		if err := res.Scan(&account.Username, &account.Password); err != nil {
+		// 和select 的顺序要一模一样，不然会报错
+		if err := res.Scan(&account.Id, &account.Username, &account.Password); err != nil {
 			return nil, err
 		} else {
 			return &account, nil
@@ -39,3 +41,5 @@ func (account Account) HasPassword(plain string) bool {
 		return true
 	}
 }
+
+

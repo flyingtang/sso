@@ -9,21 +9,38 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"errors"
 	"github.com/gin-contrib/sessions"
+	"time"
+	"strconv"
+	"crypto/md5"
+	"io"
+	"fmt"
+	"encoding/hex"
 )
+
 
 
 const (
 	// 插入账户
-	INSERTACCOUNT = `INSERT INTO ACCOUNT (username, password, nickname, sex, email) VALUES (?,?,?,?,?)`
+	INSERTACCOUNT = `INSERT INTO ACCOUNT (username, password, nickname, sex, email, created_at, updated_at) VALUES (?,?,?,?,?,?,?)`
 
 	// 根据用户名查找账户
-	QUERYACCOUNTBYUSERNAME = `SELECT username, password FROM ACCOUNT WHERE username = ?`
+	QUERYACCOUNTBYUSERNAME = `SELECT id, username, password FROM ACCOUNT WHERE username = ?`
+
+	// 生成Ticket入库
+	INSERTTICKET = `INSERT INTO Ticket (ticket, ttl, user_id, created_at, updated_at) VALUES (?,?,?,?,?)`
+
+	// 查询Ticket //TODO 得好好优化
+	QUERYTICKETBYTICKET = `SELECT ticket, ttl, created_at, updated_at, is_verify FROM Ticket WHERE is_verify = 0 AND ticket=?  order by created_at desc`
+
+	UPDATETICKETINVAILD = `update Ticket set is_verify = 1`
 )
 
 // 登录
 func Login(context *gin.Context) {
+
 	var jsonData AuthForm
 	if err := context.ShouldBind(&jsonData) ;err != nil {
+
 		utils.CheckError(context, err)
 	}else{
 
@@ -33,29 +50,60 @@ func Login(context *gin.Context) {
 		account, err := models.GetAccount(QUERYACCOUNTBYUSERNAME, username)
 		if err != nil {
 			utils.CheckError(context, errors.New("wrong username"))
+
 			return
 		}
 		if account.HasPassword(password) == false {
 			utils.CheckError(context, errors.New("wrong password"))
 			return
 		}
-		// TODO 颁发TOKEN
+
+		// 1、 设置session
 		session := sessions.Default(context)
 		session.Set("isLogin", true)
-		session.Set("username", username)
+		session.Set("username", account.Username)
+		session.Set("id", account.Id)
 		session.Save()
-		context.JSON(http.StatusOK, gin.H{
-			"message": "login success",
-		})
+
+		// 2、ticket处理
+		ticketHandle(context, account)
 	}
 
 }
 
-// 注册
-//type AuthForm struct {
-//	Username string `form:"username" binding:"required"`
-//	Password string `form:"password" binding:"required"`
-//}
+// 存入ticket
+func ticketHandle(context *gin.Context, account *models.Account){
+
+	// 2、生成ticket，并存入数据库
+	ticket := GeneraterTicket(account.Username)
+	var ticketObj = models.Ticket{Ticket:ticket,TTL: 60*5, User_id: account.Id}
+	if err := ticketObj.CreateTicket(INSERTTICKET); err != nil {
+		utils.CheckError(context, err)
+		return
+	}
+	// 3、重定向到指定Callback
+	var redirect = context.Query("redirect_uri")
+	redirect = strings.Join([]string{redirect, fmt.Sprintf("ticket=%s", ticket)}, "?")
+	context.Redirect(http.StatusFound, redirect)
+
+	return
+}
+
+
+// ticket 有效期5分钟， 校验后马上失效
+func GeneraterTicket(username string) string{
+
+	rd := strings.Join([]string{strconv.FormatInt(time.Now().Unix(), 10), username},"")
+	hash := md5.New()
+	io.WriteString(hash, rd)
+
+	ticket := hex.EncodeToString(hash.Sum(nil))
+	fmt.Println(rd, ticket,"rd, ticket............")
+	return  ticket
+
+}
+
+
 
 type AuthForm struct {
 	Username string `form:"username" binding:"required"`
@@ -88,8 +136,8 @@ func Signup(context *gin.Context) {
 		if err != nil {
 			utils.CheckError(context, err)
 		}
-
-		_, err = stmt.Exec(jsonData.Username, jsonData.Password, jsonData.Nickname, jsonData.Sex, jsonData.Email)
+		timeStamp := time.Now().Unix()
+		_, err = stmt.Exec(jsonData.Username, jsonData.Password, jsonData.Nickname, jsonData.Sex, jsonData.Email, timeStamp, timeStamp)
 		if err != nil {
 			utils.CheckError(context, err)
 		}
@@ -101,27 +149,17 @@ func Signup(context *gin.Context) {
 }
 
 func GetSignup(c *gin.Context) {
+
 	c.HTML(http.StatusOK, "auth/signup.html", nil)
 	return
 }
 
 func GetLogin(c *gin.Context) {
+
 	c.HTML(http.StatusOK, "auth/login.html", nil)
 	return
 }
 
-// 认证
-
-// 密码哈希
-//func HashPassword(plain string){
-//	// TODO 对密码的各种校验
-//	// 对密码哈希处理
-//	if pw, err := bcrypt.GenerateFromPassword([]byte(plain), bcrypt.DefaultCost) ;err != nil {
-//		utils.CheckError(context, err)
-//	}else {
-//		jsonData.Password = string(pw[:])
-//	}
-//}
 
 type Auth struct {
 	//State `form:"state"`
@@ -130,12 +168,25 @@ type Auth struct {
 }
 
 func Authorize(context *gin.Context){
-
 	session := sessions.Default(context)
 	isLogin :=session.Get("isLogin")
 
 	if isLogin == nil || isLogin == false {
-		context.Redirect(http.StatusFound, "/login")
+
+		var redirect  = "/login"
+		redirectUri := context.Query("redirect_uri")
+		fmt.Println("redirect_uriredirect_uriredirect_uri   ", redirectUri)
+		if len(redirectUri) == 0 || strings.HasPrefix(redirectUri, "http") == false {
+
+			utils.CheckError(context, errors.New("redirect_uri parameter invalid ..."))
+			return
+		}else {
+			redirect = strings.Join([]string{redirect, fmt.Sprintf("redirect_uri=%s", redirectUri)},"?")
+		}
+
+		context.HTML(http.StatusFound, "auth/login.html", gin.H{
+			"redirect_uri": redirectUri,
+		})
 		return
 	}
 
@@ -145,4 +196,42 @@ func Authorize(context *gin.Context){
 		utils.CheckError(context, err)
 	}
 
+	username := session.Get("username")
+	id := session.Get("id")
+	ticketHandle(context, &models.Account{Username: username.(string), Id: id.(int)})
+	return
 }
+
+// 校验ticket
+func VerifyTicket(context *gin.Context){
+
+	var ticket = context.PostForm("ticket")
+	if len(ticket) == 0 {
+		utils.CheckError(context, errors.New("ticket is empty"))
+		return
+	}
+	ticketObj := models.Ticket{Ticket: ticket}
+	if ticketObj, err := ticketObj.FindOneByTicket(QUERYTICKETBYTICKET);err != nil{
+
+		utils.CheckError(context, err)
+		return
+	}else {
+		curTimeStamp := time.Now().Unix()
+		createAtTimeStamp := ticketObj.CreatedAt
+
+		if int(curTimeStamp - createAtTimeStamp) > ticketObj.TTL {
+			utils.CheckError(context, errors.New("ticket  expire"))
+		}else{
+			// 失效ticket
+			if err := ticketObj.InvalidTicket(UPDATETICKETINVAILD); err != nil {
+				utils.CheckError(context, err)
+			}else{
+				context.JSON(http.StatusOK, gin.H{
+					"verirystatus": true,
+				})
+				return
+			}
+		}
+	}
+}
+

@@ -41,6 +41,7 @@ func main() {
 	// router.POST("/login", controllers.Login)
 
 	router.GET("/authorize", controllers.Authorize)
+	router.POST("/verifyTicket", controllers.VerifyTicket)
 	addr := config.GetHttpAddrPort()
 	router.Run(addr)
 }
