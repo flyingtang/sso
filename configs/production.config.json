@@ -1,0 +1,13 @@
+{
+  "httpAddr":"0.0.0.0",
+  "httpPort":"3000",
+  "sessionSecret":"sso-v2-session-secret",
+  "sessionName":"mySession",
+  "MySQL":{
+    "host": "localhost",
+    "Port": "3306",
+    "Database": "sso_development",
+    "Username": "root",
+    "Password": "root"
+  }
+}

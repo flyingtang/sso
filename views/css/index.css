@@ -1,0 +1,38 @@
+html {
+    height: 100%;
+    width: 100%;
+}
+
+body{
+    height: 100%;
+    width: 100%;
+    /*background-color: darkgray;*/
+}
+
+
+.container1{
+
+    height: 100%;
+    position: relative;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: -webkit-box;
+    -webkit-box-align: center;
+    -webkit-box-pack: center;
+}
+
+
+.loginForm{
+    min-height: 300px;
+    min-width: 500px;
+    border: 1px solid slategrey;
+    padding: 50px 50px 30px;
+    -webkit-box-flex: 0;
+}
+
+.signupForm{
+    min-height: 300px;
+    min-width: 500px;
+    /* border: 1px solid slategrey; */
+    padding: 50px 50px 30px;
+    -webkit-box-flex: 0;
+}
