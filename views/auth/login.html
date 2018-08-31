@@ -1,7 +1,7 @@
 {{define "auth/login.html"}}
 {{template "layout/header.html" .}}
 <div class="container1">
-    <form class="loginForm"  method="post" action="/login?"+{{.redirect_uri}}+>
+    <form class="loginForm"  method="post" action={{.redirect_uri}}>
         <div class="form-group">
             <label for="username">用户名</label>
             <input type="text" class="form-control" name="username" id="username" value="" aria-describedby="emailHelp" placeholder="用户名">

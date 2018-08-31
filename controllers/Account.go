@@ -57,7 +57,6 @@ func Login(context *gin.Context) {
 			utils.CheckError(context, errors.New("wrong password"))
 			return
 		}
-
 		// 1、 设置session
 		session := sessions.Default(context)
 		session.Set("isLogin", true)
@@ -156,7 +155,10 @@ func GetSignup(c *gin.Context) {
 
 func GetLogin(c *gin.Context) {
 
-	c.HTML(http.StatusOK, "auth/login.html", nil)
+	redirectUri := c.Query("redirect_uri")
+	c.HTML(http.StatusOK, "auth/login.html", gin.H{
+		"redirect_uri": "/login?redirect_uri="+redirectUri,
+	})
 	return
 }
 
@@ -184,9 +186,7 @@ func Authorize(context *gin.Context){
 			redirect = strings.Join([]string{redirect, fmt.Sprintf("redirect_uri=%s", redirectUri)},"?")
 		}
 
-		context.HTML(http.StatusFound, "auth/login.html", gin.H{
-			"redirect_uri": redirectUri,
-		})
+		context.Redirect(http.StatusFound, redirect)
 		return
 	}
 
