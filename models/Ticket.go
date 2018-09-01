@@ -34,7 +34,7 @@ func (t Ticket)FindOneByTicket(sql string) (*Ticket, error){
 		var ticket Ticket
 		Row :=  mtdt.QueryRow(t.Ticket)
 		// ticket, ttl, created_at, updated_at, is_verify
-		if err := Row.Scan(&ticket.Ticket, &ticket.TTL, &ticket.CreatedAt, &ticket.UpdatedAt, &ticket.IsVerify);err !=nil{
+		if err := Row.Scan(&ticket.Ticket, &ticket.TTL, &ticket.CreatedAt, &ticket.UpdatedAt, &ticket.IsVerify, &ticket.User_id);err !=nil{
 			return nil, err
 		}else{
 			return &ticket, nil

@@ -30,7 +30,7 @@ const (
 	INSERTTICKET = `INSERT INTO Ticket (ticket, ttl, user_id, created_at, updated_at) VALUES (?,?,?,?,?)`
 
 	// 查询Ticket //TODO 得好好优化
-	QUERYTICKETBYTICKET = `SELECT ticket, ttl, created_at, updated_at, is_verify FROM Ticket WHERE is_verify = 0 AND ticket=?  order by created_at desc`
+	QUERYTICKETBYTICKET = `SELECT ticket, ttl, created_at, updated_at, is_verify, user_id FROM Ticket WHERE is_verify = 0 AND ticket=?  order by created_at desc`
 
 	UPDATETICKETINVAILD = `update Ticket set is_verify = 1`
 )
@@ -239,6 +239,7 @@ func VerifyTicket(context *gin.Context){
 			}else{
 				context.JSON(http.StatusOK, gin.H{
 					"verirystatus": true,
+					"userId": ticketObj.User_id,
 				})
 				return
 			}
