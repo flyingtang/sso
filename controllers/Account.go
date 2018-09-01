@@ -46,15 +46,26 @@ func Login(context *gin.Context) {
 
 		username := strings.TrimSpace(jsonData.Username)
 		password := strings.TrimSpace(jsonData.Password)
+		// TODO 必要的参数校验 URL转码
+		f := context.Request.URL
+		fmt.Println(f)
+		redirectUri := context.Query("redirect_uri")
 		// 查找用户
 		account, err := models.GetAccount(QUERYACCOUNTBYUSERNAME, username)
 		if err != nil {
-			utils.CheckError(context, errors.New("wrong username"))
-
+			//utils.CheckError(context, errors.New("wrong username"))
+			context.HTML(http.StatusOK, "auth/login.html", gin.H{
+				"redirect_uri": "/login?redirect_uri="+redirectUri,
+				"isAlert": "用户名称错误",
+			})
 			return
 		}
 		if account.HasPassword(password) == false {
-			utils.CheckError(context, errors.New("wrong password"))
+			//utils.CheckError(context, errors.New("wrong password"))
+			context.HTML(http.StatusOK, "auth/login.html", gin.H{
+				"redirect_uri": "/login?redirect_uri="+redirectUri,
+				"isAlert": "密码错误",
+			})
 			return
 		}
 		// 1、 设置session

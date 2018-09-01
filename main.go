@@ -32,7 +32,7 @@ func main() {
 	config.SetSession(router)
 	//  设置静态资源目录挂载
 	router.Static("/static", "./views")
-	router.LoadHTMLGlob("views/**/*")
+	router.LoadHTMLGlob("views/**/*.html")
 	// 路由
 	router.GET("/signup",controllers.GetSignup)
 	router.POST("/signup", controllers.Signup)
